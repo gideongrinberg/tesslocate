@@ -44,8 +44,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          source ~/.brewrc && \
-          brew install libomp nlohmann-json curl cmake libarchive abseil
+          source ~/.brewrc
+          brew install openssl@3 libomp nlohmann-json curl cmake libarchive abseil
 
 
       - name: Cache s2geometry
@@ -59,7 +59,7 @@ jobs:
       - name: Build s2geometry 
         if: steps.s2geometry-cache.outputs.cache-hit != 'true'
         run : |
-          source ~/.brewrc && \
+          source ~/.brewrc
           mkdir -p s2/ && curl -L https://github.com/google/s2geometry/archive/refs/tags/v0.11.1.zip -o - | bsdtar xvf - -C s2 --strip-components=1 && \
           cd s2 && mkdir build && cd build && cmake -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF -DBUILD_TESTS=OFF .. && make -j$(nproc) && sudo make install
 
@@ -71,8 +71,11 @@ jobs:
 
       - name: Build binaries
         run: |
-          source ~/.brewrc && \
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+          source ~/.brewrc
+          export PKG_CONFIG_PATH="/home/linuxbrew/.linuxbrew/lib/pkgconfig:$PKG_CONFIG_PATH"
+          export LDFLAGS="-L/home/linuxbrew/.linuxbrew/lib $LDFLAGS"
+          export CPPFLAGS="-I/home/linuxbrew/.linuxbrew/include $CPPFLAGS"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --target tesslocate
       
       - name: Upload build artifact
