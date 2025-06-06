@@ -17,7 +17,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     steps:
