@@ -9,11 +9,11 @@ on:
 jobs:
   build-linux:
     name: Build Linux
-    uses: ./.github/workflows/build-linux.yml
+    uses: ./.github/workflows/build_linux.yml
     
   build-macos:
     name: Build macOS
-    uses: ./.github/workflows/build-mac.yml
+    uses: ./.github/workflows/build_mac.yml
 
   release:
     name: Create Release
