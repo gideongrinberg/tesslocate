@@ -1,0 +1,30 @@
+{
+  "name" : "tesslocate",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "bfed87b1938fbd406b9eef28c281b6219c889ae1",
+  "dependencies" : [ {
+    "name" : "abseil",
+    "version>=" : "20250127.1#1"
+  }, {
+    "name" : "nlohmann-json",
+    "version>=" : "3.12.0"
+  }, {
+    "name" : "openssl",
+    "version>=" : "3.5.0#1"
+  }, {
+    "name" : "s2geometry",
+    "version>=" : "0.11.1"
+  }, {
+    "name" : "vcpkg-cmake-config",
+    "version>=" : "2024-05-23"
+  }, {
+    "name" : "vcpkg-cmake-get-vars",
+    "version>=" : "2024-09-22"
+  }, {
+    "name" : "vcpkg-cmake",
+    "version>=" : "2024-04-23"
+  }, {
+    "name" : "curl",
+    "version>=" : "8.14.0"
+  } ]
+}

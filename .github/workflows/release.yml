@@ -1,0 +1,113 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x64
+            executable_name: tesslocate
+            asset_name: tesslocate-linux-x64
+          - os: windows-latest
+            arch: x64
+            executable_name: tesslocate.exe
+            asset_name: tesslocate-windows-x64.exe
+          - os: macos-latest
+            arch: x64
+            executable_name: tesslocate
+            asset_name: tesslocate-macos-x64
+          - os: macos-latest
+            arch: arm64
+            executable_name: tesslocate
+            asset_name: tesslocate-macos-arm64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup vcpkg
+      uses: microsoft/setup-msbuild@v2
+      if: matrix.os == 'windows-latest'
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pkg-config curl zip unzip tar build-essential
+
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install pkg-config
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'bfed87b1938fbd406b9eef28c281b6219c889ae1'
+
+    - name: Configure CMake (Linux/Windows)
+      if: matrix.os != 'macos-latest'
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+    - name: Configure CMake (macOS x64)
+      if: matrix.os == 'macos-latest' && matrix.arch == 'x64'
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DCMAKE_OSX_ARCHITECTURES=x86_64
+
+    - name: Configure CMake (macOS ARM64)
+      if: matrix.os == 'macos-latest' && matrix.arch == 'arm64'
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DCMAKE_OSX_ARCHITECTURES=arm64 \
+          -DVCPKG_TARGET_TRIPLET=arm64-osx
+
+    - name: Build
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Copy and rename executable (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        cp ${{github.workspace}}/build/${{ matrix.executable_name }} ${{github.workspace}}/${{ matrix.asset_name }}
+
+    - name: Copy and rename executable (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        copy "${{github.workspace}}\build\Release\${{ matrix.executable_name }}" "${{github.workspace}}\${{ matrix.asset_name }}"
+
+    - name: Verify executable exists (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        ls -la ${{github.workspace}}/${{ matrix.asset_name }}
+        file ${{github.workspace}}/${{ matrix.asset_name }}
+
+    - name: Verify executable exists (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        dir "${{github.workspace}}\${{ matrix.asset_name }}"
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ${{github.workspace}}/${{ matrix.asset_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
