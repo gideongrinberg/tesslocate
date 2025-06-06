@@ -3,6 +3,9 @@ name: Build Cross-Platform
 on:
   release:
     types: [ published ]
+  push:
+    branches:
+      - ci-fix
   workflow_dispatch:
 
 
@@ -77,7 +80,7 @@ jobs:
       if: matrix.os == 'linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libomp-dev build-essential
+        sudo apt-get install -y libomp-dev build-essential libcurl4-openssl-dev libssl-dev
 
     - name: Setup OpenMP on Windows
       if: matrix.os == 'windows'
@@ -96,18 +99,27 @@ jobs:
     - name: Configure CMake (macOS)
       if: matrix.os == 'macos'
       run: |
-        cmake -B build \
+        cmake -B build . \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }} \
           -DOpenMP_ROOT=$OpenMP_ROOT
 
-    - name: Configure CMake (Non-macOS)
-      if: matrix.os != 'macos'
+    - name: Configure CMake (Linux)
+      if: matrix.os == 'linux'
       run: |
-        cmake -B build \
+        cmake -B build . \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+
+    - name: Configure CMake (Windows)
+      if: matrix.os == 'windows'
+      shell: pwsh
+      run: |
+        cmake -B build . `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
 
     - name: Build
