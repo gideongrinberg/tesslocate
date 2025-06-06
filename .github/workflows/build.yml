@@ -3,9 +3,6 @@ name: Build Cross-Platform
 on:
   release:
     types: [ published ]
-  push:
-    branches:
-      - ci-fix
   workflow_dispatch:
 
 

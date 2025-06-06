@@ -1,0 +1,58 @@
+name: Build (Linux)
+
+on: 
+  push:
+    branches:
+      - ci-fix
+
+jobs:
+  build_linux:
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - os: linux
+          #   arch: x86_64
+          #   runner: ubuntu-latest
+          - os: linux
+            arch: arm64
+            runner: ubuntu-latest
+      env:
+        PATH: /home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:${PATH}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install homebrew
+        run: |
+          apt-get update && apt-get install --yes build-essential procps curl file git && \
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
+          echo '#!/usr/bin/bash
+          set -e
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          "$@"' > /tmp/brew_env.sh && \
+          chmod +x /tmp/brew_env.sh
+      
+      - name: Install dependencies
+        run: |
+          /tmp/brew_env.sh bash -c "brew install libomp nlohmann-json curl cmake libarchive abseil"
+
+      - name: Build s2geometry 
+        run : |
+          /tmp/brew_env.sh bash -c '
+          mkdir -p s2/ && curl -L https://github.com/google/s2geometry/archive/refs/tags/v0.11.1.zip -o - | bsdtar xvf - -C s2 --strip-components=1 && \
+          cd s2 && mkdir build && cd build && cmake -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF -DBUILD_TESTS=OFF .. && make -j$(nproc) && make install'
+      - name: Build binaries
+        run: |
+          /tmp/brew_env.sh bash -c '
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+          cmake --build build --target tesslocate'
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tesslocate-${{ matrix.os }}-${{ matrix.arch }}
+          path: build/tesslocate
+

@@ -1,0 +1,8 @@
+.git/
+**/vcpkg_installed/
+**/.idea/
+**/*.csv
+**/*.json
+!**/vcpkg.json
+**/.DS_Store
+**/**/.DS_Store
