@@ -94,6 +94,8 @@ jobs:
       with:
         vcpkgGitCommitId: bfed87b1938fbd406b9eef28c281b6219c889ae1
         vcpkgDirectory: ${{ github.workspace }}/vcpkg
+      env:
+        VCPKG_BUILD_TYPE: release
 
     # Build the project
     - name: Configure CMake (macOS)
