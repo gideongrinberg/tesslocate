@@ -38,7 +38,7 @@ jobs:
           export CC="$(brew --prefix llvm)/bin/clang"
           export CXX="$(brew --prefix llvm)/bin/clang++"
           mkdir -p s2/ && curl -L https://github.com/google/s2geometry/archive/refs/tags/v0.11.1.zip -o - | tar xz -C s2 --strip-components=1 && \
-          cd s2 && mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(brew --prefix) -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF -DBUILD_TESTS=OFF .. && make -j$(sysctl -n hw.ncpu) && make install
+          cd s2 && mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$(brew --prefix) -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF -DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF .. && make -j$(sysctl -n hw.ncpu) && make install
 
       - name: Install cached s2geometry
         if: steps.s2geometry-cache.outputs.cache-hit == 'true'
