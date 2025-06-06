@@ -110,19 +110,15 @@ jobs:
     - name: Configure CMake (Linux)
       if: matrix.os == 'linux'
       run: |
-        cmake -B build . \
+        cmake -B build -S . \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
 
     - name: Configure CMake (Windows)
       if: matrix.os == 'windows'
-      shell: pwsh
-      run: |
-        cmake -B build . `
-          -DCMAKE_BUILD_TYPE=Release `
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+      shell: cmd
+      run: cmake -B build . -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
 
     - name: Build
       run: cmake --build build --config Release --parallel

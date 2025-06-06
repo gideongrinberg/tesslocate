@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.31)
 project(tesslocate)
 
 set(CMAKE_CXX_STANDARD 20)
+if(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+    set(VCPKG_BUILD_TYPE release)
+endif()
 
 find_package(s2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
