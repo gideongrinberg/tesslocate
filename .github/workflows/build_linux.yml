@@ -25,28 +25,55 @@ jobs:
       
       - name: Install homebrew
         run: |
-          sudo apt-get update && sudo apt-get install --yes build-essential procps curl file git && \
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
-          echo '#!/usr/bin/bash
-          set -e
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          "$@"' > /tmp/brew_env.sh && \
-          chmod +x /tmp/brew_env.sh
+          if [ ! -f "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
+            sudo apt-get update && sudo apt-get install --yes build-essential procps curl file git && \
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          fi
+          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.brewrc
       
+      - name: Cache Homebrew
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/linuxbrew/.linuxbrew
+            ~/.cache/Homebrew
+          key: homebrew-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('.github/workflows/**') }}-v1
+          restore-keys: |
+            homebrew-${{ runner.os }}-${{ matrix.arch }}-
+            homebrew-${{ runner.os }}-
+
       - name: Install dependencies
         run: |
-          /tmp/brew_env.sh bash -c "brew install libomp nlohmann-json curl cmake libarchive abseil"
+          source ~/.brewrc && \
+          brew install libomp nlohmann-json curl cmake libarchive abseil
+
+
+      - name: Cache s2geometry
+        uses: actions/cache@v4
+        id: s2geometry-cache
+        with:
+          path: |
+            s2/
+          key: s2geometry-v0.11.1-${{ runner.os }}-${{ matrix.arch }}
 
       - name: Build s2geometry 
+        if: steps.s2geometry-cache.outputs.cache-hit != 'true'
         run : |
-          /tmp/brew_env.sh bash -c '
+          source ~/.brewrc && \
           mkdir -p s2/ && curl -L https://github.com/google/s2geometry/archive/refs/tags/v0.11.1.zip -o - | bsdtar xvf - -C s2 --strip-components=1 && \
-          cd s2 && mkdir build && cd build && cmake -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF -DBUILD_TESTS=OFF .. && make -j$(nproc) && make install'
+          cd s2 && mkdir build && cd build && cmake -DWITH_GFLAGS=OFF -DWITH_GTEST=OFF -DBUILD_TESTS=OFF .. && make -j$(nproc) && sudo make install
+
+      - name: Install cached s2geometry
+        if: steps.s2geometry-cache.outputs.cache-hit == 'true'
+        run: |
+          source ~/.brewrc
+          cd s2/build && sudo make install
+
       - name: Build binaries
         run: |
-          /tmp/brew_env.sh bash -c '
+          source ~/.brewrc && \
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-          cmake --build build --target tesslocate'
+          cmake --build build --target tesslocate
       
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
