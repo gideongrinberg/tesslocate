@@ -42,10 +42,13 @@ jobs:
             homebrew-${{ runner.os }}-${{ matrix.arch }}-
             homebrew-${{ runner.os }}-
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get install --yes libcurl4-openssl-dev libssl-dev
       - name: Install dependencies
         run: |
           source ~/.brewrc
-          brew install openssl@3 libomp nlohmann-json curl cmake libarchive abseil
+          brew install libomp nlohmann-json cmake libarchive abseil
 
 
       - name: Cache s2geometry
