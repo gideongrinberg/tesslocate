@@ -1,185 +1,20 @@
-name: Build Cross-Platform
+name: Build (cross-platform)
 
 on:
+  push:
+    branches:
+      - ci-fix
   release:
-    types: [ published ]
-  workflow_dispatch:
-
 
 jobs:
-  build:
-    name: Build ${{ matrix.os }}-${{ matrix.arch }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # macOS builds
-          - os: macos
-            arch: arm64
-            runner: macos-14
-            vcpkg_triplet: arm64-osx
-          - os: macos
-            arch: x86_64
-            runner: macos-13
-            vcpkg_triplet: x64-osx
-          # Windows build
-          - os: windows
-            arch: x86_64
-            runner: windows-latest
-            vcpkg_triplet: x64-windows
-          # Linux build
-          - os: linux
-            arch: x86_64
-            runner: ubuntu-latest
-            vcpkg_triplet: x64-linux
+  build-linux:
+    name: Build Linux
+    uses: ./.github/workflows/build-linux.yml
+    
+  build-macos:
+    name: Build macOS
+    uses: ./.github/workflows/build-mac.yml
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    # Set up build tools
-    - name: Set up CMake and Ninja
-      uses: lukka/get-cmake@latest
-
-    # Cache vcpkg
-    - name: Cache vcpkg
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/vcpkg
-          ${{ github.workspace }}/vcpkg_installed
-        key: vcpkg-${{ matrix.vcpkg_triplet }}-${{ hashFiles('vcpkg.json') }}
-        restore-keys: |
-          vcpkg-${{ matrix.vcpkg_triplet }}-
-
-    # Platform-specific OpenMP setup
-    - name: Install OpenMP on macOS
-      if: matrix.os == 'macos'
-      run: |
-        # Install libomp and GCC for better OpenMP support
-        brew install libomp gcc
-        
-        # Set up GCC as the compiler
-        GCC_VERSION=$(brew list --versions gcc | head -n1 | cut -d' ' -f2 | cut -d'.' -f1)
-        GCC_PREFIX=$(brew --prefix gcc)
-        
-        echo "CC=${GCC_PREFIX}/bin/gcc-${GCC_VERSION}" >> $GITHUB_ENV
-        echo "CXX=${GCC_PREFIX}/bin/g++-${GCC_VERSION}" >> $GITHUB_ENV
-        
-        # Set OpenMP paths
-        LIBOMP_PREFIX=$(brew --prefix libomp)
-        echo "OpenMP_ROOT=${LIBOMP_PREFIX}" >> $GITHUB_ENV
-        echo "LDFLAGS=-L${LIBOMP_PREFIX}/lib" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I${LIBOMP_PREFIX}/include" >> $GITHUB_ENV
-
-    - name: Install OpenMP on Ubuntu
-      if: matrix.os == 'linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libomp-dev build-essential libcurl4-openssl-dev libssl-dev
-
-    - name: Setup OpenMP on Windows
-      if: matrix.os == 'windows'
-      run: |
-        # Set up MSVC environment which includes OpenMP
-        echo "Using MSVC with built-in OpenMP support"
-
-    # Setup vcpkg
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgGitCommitId: bfed87b1938fbd406b9eef28c281b6219c889ae1
-        vcpkgDirectory: ${{ github.workspace }}/vcpkg
-      env:
-        VCPKG_BUILD_TYPE: release
-
-    # Build the project
-    - name: Configure CMake (macOS)
-      if: matrix.os == 'macos'
-      run: |
-        cmake -B build . \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }} \
-          -DOpenMP_ROOT=$OpenMP_ROOT
-
-    - name: Configure CMake (Linux)
-      if: matrix.os == 'linux'
-      run: |
-        cmake -B build -S . \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
-          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
-
-    - name: Configure CMake (Windows)
-      if: matrix.os == 'windows'
-      shell: cmd
-      run: cmake -B build . -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
-
-    - name: Build
-      run: cmake --build build --config Release --parallel
-
-    - name: Test build output (Unix)
-      if: matrix.os != 'windows'
-      run: |
-        echo "Build directory contents:"
-        find build -type f -name "*tesslocate*" || echo "No tesslocate files found"
-        echo "Directory structure:"
-        ls -la build/ || true
-
-    - name: Test build output (Windows)
-      if: matrix.os == 'windows'
-      run: |
-        Write-Host "Build directory contents:"
-        Get-ChildItem -Path build -Recurse -Name "*tesslocate*" | Write-Host
-        Write-Host "Directory structure:"
-        Get-ChildItem build | Format-Table Name, Length, LastWriteTime
-
-    # Create artifacts
-    - name: Prepare artifact (Unix)
-      if: matrix.os != 'windows'
-      run: |
-        mkdir -p artifact
-        # Find the executable
-        EXECUTABLE=$(find build -name "tesslocate" -type f | head -1)
-        if [ -n "$EXECUTABLE" ]; then
-          cp "$EXECUTABLE" artifact/tesslocate-${{ matrix.os }}-${{ matrix.arch }}
-          chmod +x artifact/tesslocate-${{ matrix.os }}-${{ matrix.arch }}
-          echo "Created artifact: tesslocate-${{ matrix.os }}-${{ matrix.arch }}"
-          ls -la artifact/
-        else
-          echo "Error: tesslocate executable not found"
-          exit 1
-        fi
-
-    - name: Prepare artifact (Windows)
-      if: matrix.os == 'windows'
-      shell: pwsh
-      run: |
-        New-Item -ItemType Directory -Force -Path artifact
-        # Find the executable
-        $executable = Get-ChildItem -Path build -Recurse -Include "tesslocate.exe" | Select-Object -First 1
-        if ($executable) {
-          $targetName = "tesslocate-${{ matrix.os }}-${{ matrix.arch }}.exe"
-          Copy-Item $executable.FullName "artifact\$targetName"
-          Write-Host "Created artifact: $targetName"
-          Get-ChildItem artifact
-        } else {
-          Write-Host "Error: tesslocate.exe not found"
-          Write-Host "Available files:"
-          Get-ChildItem build -Recurse
-          exit 1
-        }
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: tesslocate-${{ matrix.os }}-${{ matrix.arch }}
-        path: artifact/
-        retention-days: 30
-
-  # Create release with all artifacts
   release:
     name: Create Release
     needs: build
@@ -189,14 +24,14 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: release-artifacts
+        path: artifacts
 
     - name: Display structure of downloaded files
-      run: ls -la release-artifacts/
+      run: ls -la artifacts/
 
     - name: Upload release assets
       uses: softprops/action-gh-release@v1
       with:
-        files: release-artifacts/*/*/*
+        files: artifacts/*/*/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

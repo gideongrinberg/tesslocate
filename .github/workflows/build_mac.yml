@@ -1,9 +1,6 @@
 name: Build (macOS)
-
 on: 
-  push:
-    branches:
-      - ci-fix
+  workflow_call:
 
 jobs:
   build_macos:
@@ -16,9 +13,9 @@ jobs:
           - os: macos
             arch: x86_64
             runner: macos-13
-          # - os: macos
-          #   arch: arm64
-          #   runner: macos-14
+          - os: macos
+            arch: arm64
+            runner: macos-14
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
