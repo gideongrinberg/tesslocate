@@ -11,11 +11,12 @@ endif()
 find_package(s2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(CURL REQUIRED)
+find_package(absl REQUIRED)
 find_package(OpenMP)
 
 add_executable(tesslocate main.cpp external/csv.h
         external/cxxopts.h)
-target_link_libraries(tesslocate PRIVATE s2::s2 nlohmann_json::nlohmann_json ${CURL_LIBRARIES})
+target_link_libraries(tesslocate PRIVATE s2::s2 nlohmann_json::nlohmann_json ${CURL_LIBRARIES} absl::log absl::base)
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(tesslocate PRIVATE OpenMP::OpenMP_CXX)
