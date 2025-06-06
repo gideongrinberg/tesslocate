@@ -8,7 +8,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(curl CONFIG REQUIRED)
 find_package(OpenMP)
 
-add_executable(tesslocate main.cpp external/progressbar.h external/csv.h
+add_executable(tesslocate main.cpp external/csv.h
         external/cxxopts.h)
 target_link_libraries(tesslocate PRIVATE s2::s2 nlohmann_json::nlohmann_json curl)
 
