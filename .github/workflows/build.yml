@@ -39,6 +39,7 @@ jobs:
         cp artifacts/tesslocate-linux-arm64/tesslocate release-assets/tesslocate-linux-arm64
         cp artifacts/tesslocate-macos-x86_64/tesslocate release-assets/tesslocate-macos-x86_64
         cp artifacts/tesslocate-macos-arm64/tesslocate release-assets/tesslocate-macos-arm64
+        chmod +x release-assets/*
         ls -la release-assets/
 
     - name: Upload release assets
