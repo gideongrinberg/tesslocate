@@ -1,0 +1,46 @@
+name: Build (cross-platform)
+
+on:
+  push:
+    branches:
+      - ci-fix
+  release:
+
+jobs:
+  build-linux:
+    name: Build Linux
+    uses: ./.github/workflows/build_linux.yml
+    
+  build-macos:
+    name: Build macOS
+    uses: ./.github/workflows/build_mac.yml
+
+  release:
+    name: Create Release
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Display structure of downloaded files
+      run: ls -la artifacts/
+
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        cp artifacts/tesslocate-linux-x86_64/tesslocate release-assets/tesslocate-linux-x86_64
+        cp artifacts/tesslocate-linux-arm64/tesslocate release-assets/tesslocate-linux-arm64
+        cp artifacts/tesslocate-macos-x86_64/tesslocate release-assets/tesslocate-macos-x86_64
+        cp artifacts/tesslocate-macos-arm64/tesslocate release-assets/tesslocate-macos-arm64
+        ls -la release-assets/
+
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release-assets/*

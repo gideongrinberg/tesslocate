@@ -2,15 +2,20 @@ cmake_minimum_required(VERSION 3.31)
 project(tesslocate)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_definitions(-w)
+if(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+    set(VCPKG_BUILD_TYPE release)
+endif()
 
 find_package(s2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(curl CONFIG REQUIRED)
+find_package(CURL REQUIRED)
 find_package(OpenMP)
 
 add_executable(tesslocate main.cpp external/csv.h
         external/cxxopts.h)
-target_link_libraries(tesslocate PRIVATE s2::s2 nlohmann_json::nlohmann_json curl)
+target_link_libraries(tesslocate PRIVATE s2::s2 nlohmann_json::nlohmann_json ${CURL_LIBRARIES})
 
 if(OpenMP_CXX_FOUND)
     target_link_libraries(tesslocate PRIVATE OpenMP::OpenMP_CXX)
